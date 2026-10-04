@@ -1,0 +1,31 @@
+name: Ambil data Kraken
+
+on:
+  schedule:
+    - cron: "0 */3 * * *"   # setiap 3 jam, otomatis
+  workflow_dispatch:         # supaya bisa dijalankan manual juga
+
+permissions:
+  contents: write
+
+jobs:
+  ambil-data:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - run: pip install -r requirements.txt
+
+      - run: python scripts/fetch_and_append.py
+
+      - name: Simpan perubahan
+        run: |
+          git config user.name "github-actions"
+          git config user.email "actions@github.com"
+          git add data/btc_15m.csv
+          git diff --staged --quiet || git commit -m "Update data Kraken $(date -u +%Y-%m-%dT%H:%M)"
+          git push
