@@ -1,0 +1,35 @@
+name: Audit awal data Kraken
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - ".github/workflows/audit-data.yml"
+      - "scripts/audit_data.py"
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Periksa data dan kelayakan jendela
+        run: python scripts/audit_data.py --input data/btc_15m.csv --output reports/audit_data.md
+      - name: Tampilkan ringkasan
+        if: always()
+        run: |
+          if [ -f reports/audit_data.md ]; then
+            cat reports/audit_data.md >> "$GITHUB_STEP_SUMMARY"
+          fi
+      - name: Simpan laporan audit
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: audit-data-kraken
+          path: reports/audit_data.md
+
