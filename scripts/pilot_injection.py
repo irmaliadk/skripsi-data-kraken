@@ -89,7 +89,7 @@ def main():
         "",
         "Jika konfigurasi PCA-CD tidak memberi alarm, itu menunjukkan",
         "bahwa konfigurasi dari eksperimen paper belum tentu cocok",
-        "untuk aliran 2.850 fitur dan w=300. Jangan mengubah ambang",
+        "untuk aliran 2.850 baris fitur dan w=300. Jangan mengubah ambang",
         "berdasarkan hasil uji ini lalu melaporkannya sebagai hasil final.",
         "",
         "Sumber: https://doi.org/10.1145/2783258.2783359 ;",
@@ -103,4 +103,5 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
