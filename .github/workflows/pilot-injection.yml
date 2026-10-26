@@ -1,0 +1,35 @@
+name: Uji kecil injeksi berbasis paper
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - ".github/workflows/pilot-injection.yml"
+      - "scripts/pilot_injection.py"
+
+permissions:
+  contents: read
+
+jobs:
+  pilot:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Jalankan skenario Qahtan pada data Kraken
+        run: python scripts/pilot_injection.py --input data/btc_15m.csv --output reports/pilot_injection.md --pca-window 300
+      - name: Ringkasan
+        if: always()
+        run: |
+          if [ -f reports/pilot_injection.md ]; then
+            cat reports/pilot_injection.md >> "$GITHUB_STEP_SUMMARY"
+          fi
+      - name: Simpan laporan
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pilot-injection-kraken
+          path: reports/pilot_injection.md
+
