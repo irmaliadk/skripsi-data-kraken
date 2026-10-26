@@ -1,0 +1,35 @@
+name: Uji kecil KSWIN dan PCA-CD
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - ".github/workflows/pilot-detectors.yml"
+      - "scripts/pilot_detectors.py"
+
+permissions:
+  contents: read
+
+jobs:
+  pilot:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Jalankan uji kecil dari rumus paper
+        run: python scripts/pilot_detectors.py --input data/btc_15m.csv --output reports/pilot_detectors.md --pca-window 300
+      - name: Ringkasan uji
+        if: always()
+        run: |
+          if [ -f reports/pilot_detectors.md ]; then
+            cat reports/pilot_detectors.md >> "$GITHUB_STEP_SUMMARY"
+          fi
+      - name: Simpan laporan uji
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pilot-detectors-kraken
+          path: reports/pilot_detectors.md
+
