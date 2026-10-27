@@ -1,0 +1,36 @@
+name: Kumpulkan pembanding candle 1 dan 5 menit
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - ".github/workflows/collect-alternative-intervals.yml"
+      - "scripts/fetch_alternative_intervals.py"
+  schedule:
+    - cron: "37 * * * *"
+
+permissions:
+  contents: write
+
+jobs:
+  collect:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install -r requirements.txt
+      - run: python scripts/fetch_alternative_intervals.py
+      - name: Save separate interval datasets
+        run: |
+          git config user.name "github-actions"
+          git config user.email "actions@github.com"
+          git add data/btc_1m.csv data/btc_5m.csv
+          if ! git diff --cached --quiet; then
+            git commit -m "Update 1m and 5m Kraken comparison data"
+            git pull --rebase origin main
+            git push origin HEAD:main
+          fi
+
+
