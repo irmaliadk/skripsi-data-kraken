@@ -7,6 +7,7 @@ on:
       - ".github/workflows/validasi-metode.yml"
       - "scripts/validation_detectors.py"
       - "scripts/pilot_models.py"
+      - "scripts/validation_pipeline.py"
 
 permissions:
   contents: read
@@ -23,10 +24,12 @@ jobs:
         run: python scripts/validation_detectors.py
       - name: Periksa pelabelan IF dan klasifikasi RF
         run: python scripts/pilot_models.py
+      - name: Jalankan alur detektor dan pelatihan ulang
+        run: python scripts/validation_pipeline.py
       - name: Ringkasan uji awal
         if: always()
         run: |
-          for report in reports/validation_detectors.md reports/pilot_models.md; do
+          for report in reports/validation_detectors.md reports/pilot_models.md reports/validation_pipeline.md; do
             if [ -f "$report" ]; then
               cat "$report" >> "$GITHUB_STEP_SUMMARY"
               printf '\n\n' >> "$GITHUB_STEP_SUMMARY"
@@ -40,3 +43,4 @@ jobs:
           path: |
             reports/validation_detectors.md
             reports/pilot_models.md
+            reports/validation_pipeline.md
