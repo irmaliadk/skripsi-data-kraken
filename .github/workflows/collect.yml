@@ -2,7 +2,7 @@ name: Ambil data Kraken
 
 on:
   schedule:
-    - cron: "0 */3 * * *"   # setiap 3 jam, otomatis
+    - cron: "17 */3 * * *"   # setiap 3 jam pada menit 17 UTC, otomatis
   workflow_dispatch:         # supaya bisa dijalankan manual juga
 
 permissions:
