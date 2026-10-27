@@ -1,0 +1,29 @@
+name: Audit parameter pada validasi historis
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - ".github/workflows/audit-parameters.yml"
+      - "scripts/sweep_parameters.py"
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: python scripts/sweep_parameters.py
+      - uses: actions/upload-artifact@v4
+        with:
+          name: audit-parameter-validasi
+          path: |
+            reports/sweep_parameters.csv
+            reports/sweep_events.csv
+
+
