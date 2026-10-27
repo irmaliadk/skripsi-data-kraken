@@ -1,0 +1,42 @@
+name: Validasi metode skripsi
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - ".github/workflows/validasi-metode.yml"
+      - "scripts/validation_detectors.py"
+      - "scripts/pilot_models.py"
+
+permissions:
+  contents: read
+
+jobs:
+  validasi:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Periksa detektor dan injeksi
+        run: python scripts/validation_detectors.py
+      - name: Periksa pelabelan IF dan klasifikasi RF
+        run: python scripts/pilot_models.py
+      - name: Ringkasan uji awal
+        if: always()
+        run: |
+          for report in reports/validation_detectors.md reports/pilot_models.md; do
+            if [ -f "$report" ]; then
+              cat "$report" >> "$GITHUB_STEP_SUMMARY"
+              printf '\n\n' >> "$GITHUB_STEP_SUMMARY"
+            fi
+          done
+      - name: Simpan laporan
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: validasi-metode-kraken
+          path: |
+            reports/validation_detectors.md
+            reports/pilot_models.md
