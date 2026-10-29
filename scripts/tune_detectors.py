@@ -23,8 +23,8 @@ def configs():
             if n >= 2*r:
                 for alpha in (.0001, .001, .01/3):
                     yield ("KSWIN", n, r, alpha)
-    for w in (100, 150, 200, 300):
-        for xi in (1, 2, 5, 10):
+    for w in (100, 125, 150, 175, 200, 225, 250, 300):
+        for xi in (0.5, 1, 2, 3, 5, 10):
             yield ("PCA-CD", w, xi, .005)
 
 def confusion(y, pred):
