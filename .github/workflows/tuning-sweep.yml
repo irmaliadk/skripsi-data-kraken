@@ -1,0 +1,42 @@
+name: Cari konfigurasi detektor pada data uji awal
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - ".github/workflows/tuning-sweep.yml"
+      - "scripts/tune_detectors.py"
+
+permissions:
+  contents: read
+
+jobs:
+  sweep:
+    name: Cari konfigurasi ${{ matrix.method }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      matrix:
+        method: [KSWIN, PCA-CD]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Jalankan seluruh konfigurasi dan metrik
+        run: python scripts/tune_detectors.py --method "${{ matrix.method }}"
+      - name: Tampilkan ringkasan
+        if: success()
+        run: cat reports/tuning_sweep.md >> "$GITHUB_STEP_SUMMARY"
+      - name: Simpan hasil lengkap
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: tuning-sweep-${{ matrix.method }}
+          path: |
+            reports/tuning_sweep.md
+            reports/tuning_sweep_summary.csv
+            reports/tuning_sweep_runs.csv
+          if-no-files-found: warn
+
