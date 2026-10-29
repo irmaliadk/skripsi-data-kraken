@@ -18,8 +18,8 @@ OUTPUT_ROOT = Path(os.environ.get("TUNING_OUTPUT_ROOT", ROOT))
 HORIZON = 400
 
 def configs():
-    for n in (150, 200, 300, 400):
-        for r in (30, 60, 90):
+    for n in (150, 200, 250, 300, 350, 400, 450, 500):
+        for r in (30, 60, 90, 120):
             if n >= 2*r:
                 for alpha in (.0001, .001, .01/3):
                     yield ("KSWIN", n, r, alpha)
@@ -94,9 +94,13 @@ def main(limit,skip_rf,method_filter):
         for kind,onset,stream in cases:
             start=time.perf_counter()
             if method=="KSWIN":
-                alarms=[i for i,_ in reset_kswin(stream,n=a,r=b,alpha=c)]
+                history=train[-(a-1):]
+                alarms=[i-len(history) for i,_ in reset_kswin(history+stream,n=a,r=b,alpha=c)
+                        if i>=len(history)]
             else:
-                alarms=[i for i,_ in pca_cd(stream,w=a,xi=b,delta=c,mode="text_ph")["alarms"]]
+                history=train[-(2*a-1):]
+                alarms=[i-len(history) for i,_ in pca_cd(history+stream,w=a,xi=b,delta=c,
+                        mode="text_ph")["alarms"] if i>=len(history)]
             det_sec=time.perf_counter()-start
             matched=[i for i in alarms if onset>=0 and onset<=i<=min(onset+HORIZON,len(stream)-1)]
             tp=int(bool(matched))
@@ -138,6 +142,8 @@ def main(limit,skip_rf,method_filter):
     lines=["# Pencarian konfigurasi pada data uji awal","",
            "Eksplorasi Plan A, bukan hasil uji akhir. Data dibekukan hingga "+CUTOFF+".",
            "Latih=1995, validasi=855 candle. Titik injeksi 285 dan 427.",
+           "Jendela awal diisi dari ujung data latih: n-1 catatan untuk KSWIN dan",
+           "2w-1 catatan untuk PCA-CD. Alarm dilaporkan hanya pada validasi.",
            "Empat skenario lama digunakan pada kedua titik. Delapan aliran injeksi",
            "berasal dari data yang sama dan bukan delapan dataset independen.",
            "Satu alarm dapat dicocokkan dengan paling banyak satu injeksi dalam 400 candle.",
