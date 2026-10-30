@@ -1,8 +1,9 @@
 """Chronological validation audit; data after 2026-10-26 15:15 UTC is untouched.
 
 Methods: Raab et al. (2020) KSWIN; Qahtan et al. (2015) PCA-CD;
-Barrabes et al. (2023) correlation permutation; Lukats et al. (2025)
-window reset. This remains an exploratory validation, not final test.
+Barrabes et al. (2023) marginal-preserving feature displacement;
+time-shift surrogate literature for retaining most within-feature temporal order.
+This remains exploratory validation, not final testing.
 """
 import csv, math, random, statistics
 from pathlib import Path
@@ -37,19 +38,32 @@ def reset_kswin(stream,n=300,r=30,alpha=.0001):
     return alarms
 
 def inject(validation,onset,kind,chosen,scale):
-    rng=random.Random(SEED)
+    """Controlled semi-synthetic changes to one existing feature.
+
+    This adapts the change *properties* studied by Qahtan et al. to empirical
+    Kraken observations; it does not reproduce their Gaussian generator.
+    The generator may inspect the already-collected post-onset segment.
+    The detectors receive only its chronological replay.
+    """
     out=[(t,list(v)) for t,v in validation]
     after=out[onset:]
+    if len(after)<2:
+        raise ValueError("Injection needs at least two post-onset observations")
     if kind in ('mean','combined'):
         for _,v in after:
             v[chosen]+=3*scale
     if kind in ('scale','combined'):
+        center=statistics.mean(v[chosen] for _,v in after)
         for _,v in after:
-            v[chosen]*=2
+            v[chosen]=center+2*(v[chosen]-center)
     if kind in ('correlation','combined'):
         column=[v[chosen] for _,v in after]
-        rng.shuffle(column)
-        for (_,v),value in zip(after,column):
+        # A half-length cyclic time shift changes cross-feature alignment while
+        # retaining the full-segment marginal and nearly all lag-one pairs.
+        # The wrap boundary and moving-window marginals are audited separately.
+        offset=len(column)//2
+        shifted=column[offset:]+column[:offset]
+        for (_,v),value in zip(after,shifted):
             v[chosen]=value
     return [(t,tuple(v)) for t,v in out]
 
@@ -124,6 +138,7 @@ def main():
     print(out)
 if __name__=='__main__':
     main()
+
 
 
 
