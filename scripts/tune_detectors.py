@@ -23,6 +23,10 @@ def configs():
             if n >= 2*r:
                 for alpha in (.0001, .001, .01/3):
                     yield ("KSWIN", n, r, alpha)
+    for n in (400, 450, 500, 550, 600):
+        for r in (60, 90, 120, 150):
+            for alpha in (.01, .05/3, .1/3):
+                yield ("KSWIN", n, r, alpha)
     for w in (100, 125, 150, 175, 200, 225, 250, 300):
         for xi in (0.5, 1, 2, 3, 5, 10):
             yield ("PCA-CD", w, xi, .005)
@@ -133,7 +137,7 @@ def main(limit,skip_rf,method_filter):
                 item["mean_"+metric]=statistics.mean(x[metric] for x in injected)
             item["control_rf_f1"]=rows[0]["rf_f1"]
         summary.append(item)
-        print(f"{len(summary)}/{len(all_configs)} {name} det_F1={f:.3f}",flush=True)
+        print(f"{len(summary)}/{len(all_configs)} {name} det_F1={f:.3f} TP={tp} FP={fp} FN={fn} control={item['control_alarms']} delay={item['mean_delay']} rf_F1={item.get('mean_rf_f1', '')}",flush=True)
     out=OUTPUT_ROOT/"reports"
     save_csv(out/"tuning_sweep_runs.csv",runs)
     save_csv(out/"tuning_sweep_summary.csv",summary)
