@@ -1,0 +1,23 @@
+name: Perbandingan akhir KSWIN dan PCA-CD
+
+on:
+  workflow_dispatch:
+
+jobs:
+  final-comparison:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Jalankan perbandingan pada data uji yang dibekukan
+        run: python scripts/final_test.py
+      - name: Simpan hasil rinci dan ringkasan
+        uses: actions/upload-artifact@v4
+        with:
+          name: final-detector-comparison
+          path: |
+            reports/final_test_runs.csv
+            reports/final_test_summary.csv
+
