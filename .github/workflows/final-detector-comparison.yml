@@ -2,6 +2,10 @@ name: Perbandingan akhir KSWIN dan PCA-CD
 
 on:
   workflow_dispatch:
+  push:
+    paths:
+      - scripts/final_test.py
+      - .github/workflows/final-detector-comparison.yml
 
 jobs:
   final-comparison:
