@@ -34,7 +34,11 @@ def reset_kswin(stream,n=300,r=30,alpha=.0001):
             [buffer[k][j] for k in range(n-r,n)])>threshold]
         if active:
             alarms.append((i,active))
-            buffer=[]
+            # KSWIN retains the newest r observations after an alarm.
+            # See the implementations cited by Raab et al. in River and
+            # scikit-multiflow; discarding all n points creates an unintended
+            # n-observation blind period after every detection.
+            buffer=buffer[-r:]
     return alarms
 
 def inject(validation,onset,kind,chosen,scale):
@@ -138,6 +142,7 @@ def main():
     print(out)
 if __name__=='__main__':
     main()
+
 
 
 
