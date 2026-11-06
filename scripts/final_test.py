@@ -89,10 +89,13 @@ def main(limit_trials=None):
         start = time.perf_counter()
         control = [(i - warmup, detail) for i, detail in detect(prior + later)
                    if i >= warmup]
+        control_indices = [i for i, _ in control]
         runs.append(dict(detector=detector, scenario="original", trial=0,
                          onset="", alarm_count=len(control), tp="", fp="", fn="",
                          delay="", seconds=round(time.perf_counter()-start, 6),
                          correlation_before="", correlation_after="", local_ks="",
+                         control_alarm_in_window="", distinct_from_control="",
+                         same_pattern_as_control="",
                          alarm_indices=";".join(str(i) for i, _ in control)))
         for trial, onset in enumerate(onsets[:limit_trials], start=1):
             for scenario in SCENARIOS:
@@ -110,14 +113,20 @@ def main(limit_trials=None):
                 alarms = [(i - warmup, detail) for i, detail in detect(prior + stream)
                           if i >= warmup]
                 elapsed = time.perf_counter() - start
-                tp, fp, fn, delay = score_alarms([i for i, _ in alarms], onset, len(stream))
+                alarm_indices = [i for i, _ in alarms]
+                tp, fp, fn, delay = score_alarms(alarm_indices, onset, len(stream))
+                control_hit = any(onset <= i <= onset + MAX_DETECTION_DELAY_CANDLES
+                                  for i in control_indices)
                 runs.append(dict(detector=detector, scenario=scenario, trial=trial,
                                  onset=onset, alarm_count=len(alarms), tp=tp, fp=fp,
                                  fn=fn, delay=delay, seconds=round(elapsed, 6),
                                  correlation_before=round(corr0, 6),
                                  correlation_after=round(corr1, 6),
                                  local_ks=round(local_ks, 6),
-                                 alarm_indices=";".join(str(i) for i, _ in alarms)))
+                                 control_alarm_in_window=int(control_hit),
+                                 distinct_from_control=int(bool(tp) and not control_hit),
+                                 same_pattern_as_control=int(alarm_indices == control_indices),
+                                 alarm_indices=";".join(str(i) for i in alarm_indices)))
         print(detector, "complete", flush=True)
 
     summary = []
@@ -129,6 +138,9 @@ def main(limit_trials=None):
             delays = [row["delay"] for row in selected if row["delay"] != ""]
             summary.append(dict(detector=detector, scenario=scenario,
                                 trials=len(selected), tp=tp, fp=fp, fn=fn,
+                                distinct_from_control=sum(row["distinct_from_control"] for row in selected),
+                                coincident_with_control=sum(row["tp"] and row["control_alarm_in_window"] for row in selected),
+                                same_pattern_as_control=sum(row["same_pattern_as_control"] for row in selected),
                                 precision=round(precision, 6), recall=round(recall, 6),
                                 f1=round(f1, 6),
                                 mean_delay=round(statistics.mean(delays), 3) if delays else "",
