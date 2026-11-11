@@ -1,27 +1,44 @@
 name: Perbandingan akhir KSWIN dan PCA-CD
 
+# Pengujian akhir hanya dimulai secara manual setelah batas data uji ditetapkan.
 on:
   workflow_dispatch:
-  push:
-    paths:
-      - scripts/final_test.py
-      - .github/workflows/final-detector-comparison.yml
+    inputs:
+      test_cutoff_utc:
+        description: "Waktu candle uji terakhir, UTC (contoh 2026-11-11 05:45:00+00:00)"
+        required: true
+        type: string
 
 jobs:
   final-comparison:
     runs-on: ubuntu-latest
+    timeout-minutes: 360
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - name: Jalankan perbandingan pada data uji yang dibekukan
-        run: python scripts/final_test.py
-      - name: Simpan hasil rinci dan ringkasan
+      - name: Pilih konfigurasi dari bagian validasi
+        run: python scripts/tune_detectors.py
+      - name: Jalankan pengujian akhir
+        env:
+          TEST_CUTOFF_UTC: ${{ inputs.test_cutoff_utc }}
+        run: |
+          python scripts/final_test.py \
+            --test-cutoff "$TEST_CUTOFF_UTC" \
+            --selection reports/thesis_selected_config.json \
+            --confirm-final
+      - name: Simpan keluaran validasi dan pengujian
         uses: actions/upload-artifact@v4
         with:
-          name: final-detector-comparison
+          name: thesis-detector-comparison
           path: |
-            reports/final_test_runs.csv
-            reports/final_test_summary.csv
+            reports/thesis_validation_runs.csv
+            reports/thesis_validation_summary.csv
+            reports/thesis_injection_audit.csv
+            reports/thesis_selected_config.json
+            reports/thesis_final_runs.csv
+            reports/thesis_final_summary.csv
+            reports/thesis_final_injection_audit.csv
+            reports/thesis_final_metadata.json
 
