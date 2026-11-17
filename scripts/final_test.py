@@ -53,7 +53,7 @@ def timestamp_rows(runs, test):
 
 
 def main(test_cutoff, selection_path, data_path=DATA, output_root=ROOT):
-    historical, _, test, _, _ = prepare(data_path)
+    _, validation, test, _, _ = prepare(data_path)
     cutoff = dt.datetime.fromisoformat(test_cutoff)
     if cutoff.utcoffset() != dt.timedelta(0):
         raise ValueError("Batas data uji harus ditulis dalam UTC")
@@ -72,7 +72,7 @@ def main(test_cutoff, selection_path, data_path=DATA, output_root=ROOT):
     runs, summaries = [], []
     for method, config in selected.items():
         original_alarms, original_seconds = run_detector(
-            config, historical, test)
+            config, validation, test)
         runs.append({
             "detector": method, "scenario": "original", "trial": 0,
             "onset": "", "alarm_count": len(original_alarms),
@@ -82,7 +82,7 @@ def main(test_cutoff, selection_path, data_path=DATA, output_root=ROOT):
                for key in ("tp", "fp", "fn", "delay")},
         })
         for trial, (scenario, onset, stream) in enumerate(cases, start=1):
-            alarms, seconds = run_detector(config, historical, stream)
+            alarms, seconds = run_detector(config, validation, stream)
             row = {
                 "detector": method, "scenario": scenario, "trial": trial,
                 "onset": onset, "alarm_count": len(alarms),

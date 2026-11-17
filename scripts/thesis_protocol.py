@@ -100,12 +100,13 @@ def make_stream(original, onset, scenario):
     return inject(original, onset, scenario, FEATURE_INDEX, 1.0)
 
 
-def run_detector(config, historical, stream):
+def run_detector(config, preceding, stream):
+    """Fill the first window with unchanged rows just before this stream."""
     method, a, b, c = config
     warmup = a - 1 if method == "KSWIN" else 2 * a - 1
-    prior = historical[-warmup:]
+    prior = preceding[-warmup:]
     if len(prior) != warmup:
-        raise ValueError("Bagian historis tidak cukup untuk jendela awal")
+        raise ValueError("Data sebelum aliran tidak cukup untuk jendela awal")
     start = time.perf_counter()
     if method == "KSWIN":
         raw = reset_kswin(prior + stream, n=a, r=b, alpha=c)

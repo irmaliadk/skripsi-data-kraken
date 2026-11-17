@@ -17,6 +17,9 @@ terjadwal tetap berjalan setiap tiga jam.
   `reports/thesis_final_timestamps.csv` menampilkan waktu awal injeksi dan
   alarm dalam UTC serta WIB; urutan dan perhitungan tetap menggunakan UTC.
 
+Jendela awal validasi diisi dengan akhir bagian historis. Pada pengujian akhir,
+jendela awal diisi dengan akhir data validasi asli, tepat sebelum bagian uji.
+
 Satu pemeriksaan kode yang cepat dapat dijalankan dengan
 `python scripts/tune_detectors.py --smoke`. Mode ini menggunakan satu titik
 injeksi dan satu kandidat per metode, serta tidak menghasilkan konfigurasi
