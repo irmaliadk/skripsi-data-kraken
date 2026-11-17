@@ -40,5 +40,6 @@ jobs:
             reports/thesis_final_runs.csv
             reports/thesis_final_summary.csv
             reports/thesis_final_injection_audit.csv
+            reports/thesis_final_timestamps.csv
             reports/thesis_final_metadata.json
 

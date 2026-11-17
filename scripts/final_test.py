@@ -13,7 +13,7 @@ from pathlib import Path
 from thesis_protocol import (
     DATA, FEATURE_INDEX, MAIN_HORIZON, REPETITIONS, ROOT, SCENARIOS,
     SENSITIVITY_HORIZONS, audit_injection, make_stream, measures, onsets,
-    prepare, run_detector, score_alarms, write_csv,
+    prepare, run_detector, score_alarms, to_wib, write_csv,
 )
 
 
@@ -31,6 +31,25 @@ def read_selection(path):
     for method, item in payload["selected"].items():
         configs[method] = (method, *item["parameters"])
     return configs
+
+
+def timestamp_rows(runs, test):
+    """List UTC and WIB times for each injected onset and detector alarm."""
+    result = []
+    for run in runs:
+        shared = {key: run[key] for key in ("detector", "scenario", "trial")}
+        indices = []
+        if run["onset"] != "":
+            indices.append(("injection_onset", int(run["onset"])))
+        indices.extend(("alarm", int(value)) for value in
+                       run["alarm_indices"].split(";") if value)
+        for kind, index in indices:
+            if index < 0 or index >= len(test):
+                raise ValueError("Indeks alarm atau injeksi di luar data uji")
+            utc_stamp = test[index][0]
+            result.append({**shared, "event": kind, "index": index,
+                           "time_utc": utc_stamp, "time_wib": to_wib(utc_stamp)})
+    return result
 
 
 def main(test_cutoff, selection_path, data_path=DATA, output_root=ROOT):
@@ -98,8 +117,10 @@ def main(test_cutoff, selection_path, data_path=DATA, output_root=ROOT):
     write_csv(output / "thesis_final_runs.csv", runs)
     write_csv(output / "thesis_final_summary.csv", summaries)
     write_csv(output / "thesis_final_injection_audit.csv", audits)
+    write_csv(output / "thesis_final_timestamps.csv", timestamp_rows(runs, test))
     metadata = {
         "test_cutoff_utc": test_cutoff,
+        "test_cutoff_wib": to_wib(test_cutoff),
         "test_rows": len(test),
         "onsets": shared_onsets,
         "feature_index": FEATURE_INDEX,

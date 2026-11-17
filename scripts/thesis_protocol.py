@@ -28,6 +28,15 @@ SEED = 2015
 REPETITIONS = 50
 MAIN_HORIZON = 96
 SENSITIVITY_HORIZONS = (24, 25, 48, 50, 85, 96, 100, 192, 200)
+WIB = dt.timezone(dt.timedelta(hours=7), name="WIB")
+
+
+def to_wib(utc_stamp):
+    """Format a UTC candle timestamp for display without changing its index."""
+    moment = dt.datetime.fromisoformat(utc_stamp)
+    if moment.tzinfo is None or moment.utcoffset() != dt.timedelta(0):
+        raise ValueError("Waktu sumber harus memiliki zona UTC")
+    return moment.astimezone(WIB).strftime("%Y-%m-%d %H:%M:%S WIB")
 
 
 def configurations():

@@ -13,7 +13,9 @@ terjadwal tetap berjalan setiap tiga jam.
   `reports/thesis_selected_config.json`.
 - `scripts/final_test.py`: memakai konfigurasi hasil validasi dan batas akhir
   data uji yang ditetapkan secara eksplisit. Perintah ini memerlukan
-  `--confirm-final` agar tidak dijalankan tanpa sengaja.
+  `--confirm-final` agar tidak dijalankan tanpa sengaja. Berkas
+  `reports/thesis_final_timestamps.csv` menampilkan waktu awal injeksi dan
+  alarm dalam UTC serta WIB; urutan dan perhitungan tetap menggunakan UTC.
 
 Satu pemeriksaan kode yang cepat dapat dijalankan dengan
 `python scripts/tune_detectors.py --smoke`. Mode ini menggunakan satu titik
