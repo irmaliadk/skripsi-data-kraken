@@ -12,9 +12,11 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
 from thesis_core.injection import inject  # noqa: E402
 from thesis_core.kswin import ks_statistic, reset_kswin  # noqa: E402
 from thesis_core.pca_cd import (  # noqa: E402
+    area_divergence,
     covariance,
     eigen_symmetric,
     page_hinkley_step,
+    percentile,
 )
 
 
@@ -57,6 +59,31 @@ class ManualBab4Tests(unittest.TestCase):
         self.assertAlmostEqual(peak - m, 0.520, places=6)
         self.assertAlmostEqual(average, 0.475, places=6)
         self.assertTrue(alarm)
+
+    def test_fd_histogram_and_cd_area(self):
+        """Proyeksi Tabel 4.12 memberi skor CD-Area 0,25 dan 1,00."""
+        reference = [
+            [-0.591381, -0.038243],
+            [0.378639, -0.083758],
+            [0.126308, -0.036292],
+            [0.086435, 0.158294],
+        ]
+        changed = [
+            [2.185020, -0.279220],
+            [-0.549145, -0.443659],
+            [0.138210, -0.812346],
+            [0.338628, -0.353642],
+        ]
+        for dimension, width, score in (
+            (0, 0.343215, 0.25),
+            (1, 0.078085, 1.0),
+        ):
+            old = [row[dimension] for row in reference]
+            new = [row[dimension] for row in changed]
+            ordered = sorted(old)
+            iqr = percentile(ordered, 0.75) - percentile(ordered, 0.25)
+            self.assertAlmostEqual(2 * iqr / len(old) ** (1 / 3), width, places=6)
+            self.assertAlmostEqual(area_divergence(old, new), score, places=6)
 
     def test_four_injection_scenarios(self):
         """Empat baris ID 5–8 mengikuti Tabel 4.5–4.8."""

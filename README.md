@@ -27,6 +27,17 @@ Pengumpulan pembanding interval 1 dan 5 menit tetap berjalan melalui
 Jendela awal validasi diisi dengan akhir bagian historis. Pada pengujian akhir,
 jendela awal diisi dengan akhir data validasi asli, tepat sebelum bagian uji.
 
+Kolom `fp_before_onset` dan `fp_after_onset` memerinci FP pada salinan
+berinjeksi; jumlah keduanya sama dengan `fp` yang dipakai dalam metrik utama.
+Alarm pada aliran asli tetap dicatat tanpa TP, FP, atau FN. Dalam ringkasan
+validasi, `total_seconds` setiap skenario menjumlahkan salinan skenario itu
+sendiri, sedangkan `control_seconds` menyimpan waktu aliran asli. Waktu seluruh
+aliran kandidat tetap dipakai sebagai kriteria tambahan pemilihan konfigurasi.
+
+Workflow pengumpulan memakai Python 3.11 dengan `requests==2.34.2` dan
+`pandas==3.1.1`, sesuai versi yang terpasang pada run pengumpulan
+`44295702322`. Workflow validasi dan pengujian memakai Python 3.12.
+
 Satu pemeriksaan kode yang cepat dapat dijalankan dengan
 `python scripts/tune_detectors.py --smoke`. Mode ini menggunakan satu titik
 injeksi dan satu kandidat per metode, serta tidak menghasilkan konfigurasi

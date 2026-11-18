@@ -72,7 +72,7 @@ def _run_candidate(config, historical, validation, cases):
     return control_alarms, control_seconds, rows, by_scenario
 
 
-def _scenario_summaries(config, control_alarms, total_seconds, by_scenario):
+def _scenario_summaries(config, control_alarms, control_seconds, by_scenario):
     """Ringkas empat jenis injeksi dan kumpulkan keterlambatannya."""
     name = configuration_name(config)
     summaries, scenario_f1, delays = [], [], []
@@ -94,7 +94,8 @@ def _scenario_summaries(config, control_alarms, total_seconds, by_scenario):
                 **metrics,
                 "control_alarms": len(control_alarms),
                 "control_alarm_indices": ";".join(map(str, control_alarms)),
-                "total_seconds": total_seconds,
+                "control_seconds": control_seconds,
+                "total_seconds": sum(row["seconds"] for row in group),
             }
         )
     return summaries, scenario_f1, delays
@@ -104,7 +105,7 @@ def _summarize_candidate(config, control_alarms, control_seconds, rows, by_scena
     """Bentuk ringkasan skenario dan kriteria pemilihan satu kandidat."""
     total_seconds = control_seconds + sum(row["seconds"] for row in rows)
     summaries, scenario_f1, delays = _scenario_summaries(
-        config, control_alarms, total_seconds, by_scenario
+        config, control_alarms, control_seconds, by_scenario
     )
     candidate = {
         "config": configuration_name(config),

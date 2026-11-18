@@ -73,11 +73,18 @@ class RegressionTests(unittest.TestCase):
                     new_alarms, _ = run_detector(config, historical, new_stream)
                     self.assertEqual(old_alarms, new_alarms)
                     for horizon in old.SENSITIVITY_HORIZONS:
+                        previous = old.score_alarms(
+                            old_alarms, onset, len(old_stream), horizon
+                        )
+                        current = score_alarms(
+                            new_alarms, onset, len(new_stream), horizon
+                        )
                         self.assertEqual(
-                            old.score_alarms(
-                                old_alarms, onset, len(old_stream), horizon
-                            ),
-                            score_alarms(new_alarms, onset, len(new_stream), horizon),
+                            previous, {key: current[key] for key in previous}
+                        )
+                        self.assertEqual(
+                            current["fp"],
+                            current["fp_before_onset"] + current["fp_after_onset"],
                         )
 
     def test_final_input_and_output_helpers(self):

@@ -8,14 +8,17 @@ SENSITIVITY_HORIZONS = (24, 25, 48, 50, 85, 96, 100, 192, 200)
 
 
 def score_alarms(alarms, onset, length, horizon=MAIN_HORIZON):
-    """Pasangkan alarm pertama dengan satu titik injeksi."""
+    """Pasangkan alarm dan pisahkan alarm sebelum serta sesudah injeksi."""
     matches = [
         index for index in alarms if onset <= index <= min(onset + horizon, length - 1)
     ]
     tp = int(bool(matches))
+    fp_before_onset = sum(index < onset for index in alarms)
     return {
         "tp": tp,
         "fp": len(alarms) - tp,
+        "fp_before_onset": fp_before_onset,
+        "fp_after_onset": len(alarms) - tp - fp_before_onset,
         "fn": 1 - tp,
         "delay": min(matches) - onset if matches else None,
     }
@@ -34,6 +37,8 @@ def summarize_group(group, horizon=MAIN_HORIZON, missing_delay=None):
     tp = sum(row[f"tp_h{horizon}"] for row in group)
     fp = sum(row[f"fp_h{horizon}"] for row in group)
     fn = sum(row[f"fn_h{horizon}"] for row in group)
+    fp_before_onset = sum(row[f"fp_before_onset_h{horizon}"] for row in group)
+    fp_after_onset = sum(row[f"fp_after_onset_h{horizon}"] for row in group)
     precision, recall, f1 = measures(tp, fp, fn)
     delay_key = f"delay_h{horizon}"
     mean_delay = (
@@ -44,6 +49,8 @@ def summarize_group(group, horizon=MAIN_HORIZON, missing_delay=None):
     return {
         "tp": tp,
         "fp": fp,
+        "fp_before_onset": fp_before_onset,
+        "fp_after_onset": fp_after_onset,
         "fn": fn,
         "precision": precision,
         "recall": recall,

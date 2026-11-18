@@ -104,7 +104,9 @@ def _original_row(method, alarms, seconds):
         **{
             f"{key}_h{horizon}": ""
             for horizon in SENSITIVITY_HORIZONS
-            for key in ("tp", "fp", "fn", "delay")
+            for key in (
+                "tp", "fp", "fp_before_onset", "fp_after_onset", "fn", "delay"
+            )
         },
     }
 
@@ -151,6 +153,8 @@ def _method_summaries(method, rows, original_alarms):
                 "repetitions": len(group),
                 "tp": metrics["tp"],
                 "fp": metrics["fp"],
+                "fp_before_onset": metrics["fp_before_onset"],
+                "fp_after_onset": metrics["fp_after_onset"],
                 "fn": metrics["fn"],
                 "precision": metrics["precision"],
                 "recall": metrics["recall"],
