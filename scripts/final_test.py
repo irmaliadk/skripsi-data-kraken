@@ -30,7 +30,8 @@ def read_selection(path, data_path=DATA):
     payload = json.loads(Path(path).read_text(encoding="utf-8"))
     if (
         payload["source"] != "chronological validation only"
-        or payload.get("dataset_sha256") != hashlib.sha256(Path(data_path).read_bytes()).hexdigest()
+        or payload.get("dataset_sha256")
+        != hashlib.sha256(Path(data_path).read_bytes()).hexdigest()
         or payload["historical_rows"] != 1995
         or payload["validation_rows"] != 855
         or payload["repetitions_per_scenario"] != REPETITIONS

@@ -32,11 +32,15 @@ def _read_candles(path):
                 raise ValueError("Waktu candle harus memiliki zona UTC")
             if previous_time is not None and moment - previous_time != interval:
                 raise ValueError("Urutan atau interval candle mentah tidak lengkap")
-            values = {key: float(candle[key]) for key in
-                      ("open", "high", "low", "close", "vwap", "volume", "count")}
+            values = {
+                key: float(candle[key])
+                for key in ("open", "high", "low", "close", "vwap", "volume", "count")
+            }
             if not all(math.isfinite(value) for value in values.values()):
                 raise ValueError("Nilai candle mentah harus berupa angka terhingga")
-            close, volume, count = (values[key] for key in ("close", "volume", "count"))
+            close, volume, count = (
+                values[key] for key in ("close", "volume", "count")
+            )
             if close <= 0 or volume < 0 or count < 0:
                 raise ValueError("Nilai candle tidak valid")
             candles.append((candle["time"], close, volume, count))
@@ -50,11 +54,16 @@ def read_features(path):
     output = []
     for previous, current in zip(candles, candles[1:]):
         stamp, close, volume, count = current
-        output.append((stamp, (
-            math.log(close / previous[1]),
-            math.log1p(volume),
-            math.log1p(count),
-        )))
+        output.append(
+            (
+                stamp,
+                (
+                    math.log(close / previous[1]),
+                    math.log1p(volume),
+                    math.log1p(count),
+                ),
+            )
+        )
     return output
 
 
