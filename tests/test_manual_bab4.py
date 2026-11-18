@@ -10,6 +10,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
 
 from thesis_core.injection import inject  # noqa: E402
+from thesis_core.data import DATA, read_features  # noqa: E402
 from thesis_core.kswin import ks_statistic, reset_kswin  # noqa: E402
 from thesis_core.pca_cd import (  # noqa: E402
     area_divergence,
@@ -17,6 +18,9 @@ from thesis_core.pca_cd import (  # noqa: E402
     eigen_symmetric,
     page_hinkley_step,
     percentile,
+    _reference_projection,
+    _change_score,
+    project,
 )
 
 
@@ -59,6 +63,37 @@ class ManualBab4Tests(unittest.TestCase):
         self.assertAlmostEqual(peak - m, 0.520, places=6)
         self.assertAlmostEqual(average, 0.475, places=6)
         self.assertTrue(alarm)
+
+    def test_pca_original_and_injected_at_id8(self):
+        """Kedua aliran memberi alarm jika tiga skor 0,30 diasumsikan."""
+        source = read_features(DATA)[:8]
+        reference = [values[1:] for _, values in source[:4]]
+        original = [values[1:] for _, values in source[4:]]
+        injected = [values[1:] for _, values in inject(source[4:], 0, "mean", 2, 1 / 3)]
+        means, directions, reference_pc = _reference_projection(reference)
+        self.assertEqual(len(directions), 2)
+        original_pc = project(original, means, directions)
+        injected_pc = project(injected, means, directions)
+        self.assertEqual(
+            [area_divergence([row[k] for row in reference_pc], [row[k] for row in original_pc]) for k in range(2)],
+            [0.75, 1.0],
+        )
+        self.assertEqual(
+            [area_divergence([row[k] for row in reference_pc], [row[k] for row in injected_pc]) for k in range(2)],
+            [0.25, 1.0],
+        )
+        for sample in (original, injected):
+            score = _change_score(reference_pc, project(sample, means, directions), directions)
+            self.assertEqual(score, 1.0)
+            total = cumulative = peak = 0.0
+            count = 0
+            for value in (0.30, 0.30, 0.30, score):
+                total, count, cumulative, peak, average, alarm = page_hinkley_step(
+                    value, total, count, cumulative, peak, 0.005, 1, "text_ph"
+                )
+            self.assertAlmostEqual(peak - cumulative, 0.520)
+            self.assertAlmostEqual(average, 0.475)
+            self.assertTrue(alarm)
 
     def test_fd_histogram_and_cd_area(self):
         """Proyeksi Tabel 4.12 memberi skor CD-Area 0,25 dan 1,00."""

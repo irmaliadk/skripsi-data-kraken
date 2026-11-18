@@ -1,6 +1,7 @@
 """Bandingkan keluaran deterministik refaktor dengan implementasi lama."""
 
 import importlib.util
+import hashlib
 import json
 import shutil
 import sys
@@ -39,7 +40,7 @@ class RegressionTests(unittest.TestCase):
         """Bekukan salinan CSV agar dua versi membaca data yang sama."""
         cls.folder = tempfile.TemporaryDirectory()
         cls.data = Path(cls.folder.name) / "btc_15m.csv"
-        shutil.copyfile(ROOT / "data" / "btc_15m.csv", cls.data)
+        shutil.copyfile(ROOT / "data" / "btc_15m_study_20261111.csv", cls.data)
         cls.old_parts = old.prepare(cls.data)
         cls.new_parts = prepare(cls.data)
 
@@ -89,12 +90,12 @@ class RegressionTests(unittest.TestCase):
 
     def test_final_input_and_output_helpers(self):
         """Periksa cutoff dan keluaran waktu tanpa menjalankan uji akhir."""
-        cutoff = "2026-11-08 05:30:00+00:00"
+        cutoff = "2026-11-11 16:45:00+00:00"
         validation, test = _test_rows(self.data, cutoff)
         old_test = [row for row in self.old_parts[2] if row[0] <= cutoff]
         self.assertEqual(validation, self.old_parts[1])
         self.assertEqual(test, old_test)
-        self.assertEqual(len(test), 1209)
+        self.assertEqual(len(test), 1542)
         runs = [
             {
                 "detector": "KSWIN",
@@ -112,6 +113,9 @@ class RegressionTests(unittest.TestCase):
         """Pembaca konfigurasi tetap menerima payload valid yang sama."""
         payload = {
             "source": "chronological validation only",
+            "dataset_sha256": hashlib.sha256(
+                (ROOT / "data" / "btc_15m_study_20261111.csv").read_bytes()
+            ).hexdigest(),
             "historical_rows": 1995,
             "validation_rows": 855,
             "repetitions_per_scenario": 50,
@@ -125,6 +129,10 @@ class RegressionTests(unittest.TestCase):
         selection = Path(self.folder.name) / "selection.json"
         selection.write_text(json.dumps(payload), encoding="utf-8")
         self.assertEqual(read_selection(selection), old_final.read_selection(selection))
+        payload["dataset_sha256"] = "0" * 64
+        selection.write_text(json.dumps(payload), encoding="utf-8")
+        with self.assertRaisesRegex(ValueError, "Konfigurasi validasi"):
+            read_selection(selection)
 
 
 if __name__ == "__main__":

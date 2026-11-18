@@ -8,38 +8,53 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[2]
-DATA = ROOT / "data" / "btc_15m.csv"
+DATA = ROOT / "data" / "btc_15m_study_20261111.csv"
 HISTORICAL_END = dt.datetime.fromisoformat("2026-10-17 17:30:00+00:00")
 VALIDATION_END = dt.datetime.fromisoformat("2026-10-26 15:15:00+00:00")
 HISTORICAL_ROWS = 1995
 VALIDATION_ROWS = 855
+TEST_ROWS = 1542
+TEST_CUTOFF_UTC = "2026-11-11 16:45:00+00:00"
 FEATURE_COUNT = 3
 CANDLE_INTERVAL_MINUTES = 15
 WIB = dt.timezone(dt.timedelta(hours=7), name="WIB")
 
 
-def read_features(path):
-    """Bentuk tiga fitur dari CSV OHLC Kraken dalam urutan aslinya."""
-    output, prior = [], None
+def _read_candles(path):
+    """Periksa seluruh candle mentah sebelum pembentukan fitur."""
+    candles = []
+    previous_time = None
+    interval = dt.timedelta(minutes=CANDLE_INTERVAL_MINUTES)
     with Path(path).open(newline="", encoding="utf-8-sig") as handle:
         for candle in csv.DictReader(handle):
-            close = float(candle["close"])
-            volume = float(candle["volume"])
-            count = float(candle["count"])
+            moment = dt.datetime.fromisoformat(candle["time"])
+            if moment.utcoffset() != dt.timedelta(0):
+                raise ValueError("Waktu candle harus memiliki zona UTC")
+            if previous_time is not None and moment - previous_time != interval:
+                raise ValueError("Urutan atau interval candle mentah tidak lengkap")
+            values = {key: float(candle[key]) for key in
+                      ("open", "high", "low", "close", "vwap", "volume", "count")}
+            if not all(math.isfinite(value) for value in values.values()):
+                raise ValueError("Nilai candle mentah harus berupa angka terhingga")
+            close, volume, count = (values[key] for key in ("close", "volume", "count"))
             if close <= 0 or volume < 0 or count < 0:
                 raise ValueError("Nilai candle tidak valid")
-            if prior is not None:
-                output.append(
-                    (
-                        candle["time"],
-                        (
-                            math.log(close / prior),
-                            math.log1p(volume),
-                            math.log1p(count),
-                        ),
-                    )
-                )
-            prior = close
+            candles.append((candle["time"], close, volume, count))
+            previous_time = moment
+    return candles
+
+
+def read_features(path):
+    """Bentuk tiga fitur setelah seluruh candle mentah diperiksa."""
+    candles = _read_candles(path)
+    output = []
+    for previous, current in zip(candles, candles[1:]):
+        stamp, close, volume, count = current
+        output.append((stamp, (
+            math.log(close / previous[1]),
+            math.log1p(volume),
+            math.log1p(count),
+        )))
     return output
 
 

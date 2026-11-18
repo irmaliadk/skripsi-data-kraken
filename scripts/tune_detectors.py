@@ -1,13 +1,14 @@
 """Pilih satu konfigurasi tiap detektor hanya dari bagian validasi."""
 
 import argparse
+import hashlib
 import json
 import math
 import statistics
 from collections import defaultdict
 from pathlib import Path
 
-from thesis_core.data import ROOT, prepare
+from thesis_core.data import DATA, ROOT, prepare
 from thesis_core.evaluation import (
     MAIN_HORIZON,
     SENSITIVITY_HORIZONS,
@@ -129,6 +130,7 @@ def _write_results(
     validation,
     chosen_onsets,
     selected,
+    data_path,
 ):
     """Simpan keluaran validasi dan pilihan konfigurasi bila lengkap."""
     output = output_root / "reports"
@@ -140,6 +142,7 @@ def _write_results(
         return
     payload = {
         "source": "chronological validation only",
+        "dataset_sha256": hashlib.sha256(Path(data_path).read_bytes()).hexdigest(),
         "historical_rows": len(historical),
         "validation_rows": len(validation),
         "onsets": chosen_onsets,
@@ -215,6 +218,7 @@ def main(smoke=False, data_path=None, output_root=ROOT):
         validation,
         chosen_onsets,
         selected,
+        data_path if data_path else DATA,
     )
     print(
         "SMOKE ONLY" if smoke else "VALIDATION COMPLETE",

@@ -2,11 +2,12 @@
 
 import argparse
 import datetime as dt
+import hashlib
 import json
 import statistics
 from pathlib import Path
 
-from thesis_core.data import DATA, ROOT, prepare, to_wib
+from thesis_core.data import DATA, ROOT, TEST_CUTOFF_UTC, TEST_ROWS, prepare, to_wib
 from thesis_core.evaluation import (
     MAIN_HORIZON,
     SENSITIVITY_HORIZONS,
@@ -24,11 +25,12 @@ from thesis_core.protocol import (
 )
 
 
-def read_selection(path):
+def read_selection(path, data_path=DATA):
     """Terima hanya pilihan konfigurasi yang berasal dari validasi Bab 4."""
     payload = json.loads(Path(path).read_text(encoding="utf-8"))
     if (
         payload["source"] != "chronological validation only"
+        or payload.get("dataset_sha256") != hashlib.sha256(Path(data_path).read_bytes()).hexdigest()
         or payload["historical_rows"] != 1995
         or payload["validation_rows"] != 855
         or payload["repetitions_per_scenario"] != REPETITIONS
@@ -197,8 +199,12 @@ def _save_results(
 
 def main(test_cutoff, selection_path, data_path=DATA, output_root=ROOT):
     """Laksanakan pengujian akhir setelah cutoff dan konfigurasi ditentukan."""
+    if test_cutoff != TEST_CUTOFF_UTC:
+        raise ValueError("Batas akhir data uji tidak sesuai keputusan penelitian")
     validation, test = _test_rows(data_path, test_cutoff)
-    selected = read_selection(selection_path)
+    if len(test) != TEST_ROWS:
+        raise ValueError("Jumlah data uji tidak sesuai data penelitian")
+    selected = read_selection(selection_path, data_path)
     shared_onsets = onsets(len(test), TEST_MAX_INJECTION_FRACTION)
     cases = _cases(test, shared_onsets)
     audits = [

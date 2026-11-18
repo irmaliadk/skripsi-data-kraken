@@ -4,6 +4,14 @@ Data BTC/USD interval 15 menit dikumpulkan oleh `collect.yml` setiap tiga jam.
 Pengumpulan pembanding interval 1 dan 5 menit tetap berjalan melalui
 `collect-alternative-intervals.yml`.
 
+Masukan penelitian dibekukan dalam `data/btc_15m_study_20261111.csv`:
+4.393 candle dari 26 September 2026 pukul 22.45 UTC sampai 11 November 2026
+pukul 16.45 UTC (11 November pukul 23.45 WIB). SHA-256 berkas tersebut adalah
+`984e7015f14fe0eb203c9b2c6d95ed5990d0c9071cc18e6b5a295322203b2bbd`.
+CSV pengumpulan `data/btc_15m.csv` tetap bertambah tanpa mengubah masukan
+penelitian. Fitur berjumlah 4.392 baris: 1.995 historis, 855 validasi, dan
+1.542 uji.
+
 ## Kode untuk rancangan Bab 4
 
 - `scripts/thesis_core/data.py`: baca CSV, bentuk fitur, periksa interval,
@@ -46,9 +54,13 @@ sama saat kode protokol berubah. Contoh hitung Bab 4 dan kesetaraan alarm
 dengan kode lama dapat diperiksa dengan `python -m unittest discover -s tests`.
 
 Validasi lengkap dapat dijalankan melalui workflow `tuning-sweep.yml` secara
-manual. Workflow `final-detector-comparison.yml` juga hanya berjalan secara
-manual dan meminta waktu candle uji terakhir dalam UTC; workflow tersebut
-menjalankan validasi terlebih dahulu sebelum pengujian akhir.
+manual. Pilihan konfigurasi disimpan dalam artefak `thesis-detector-validation`
+beserta SHA-256 CSV penelitian. Setelah hasil validasi diperiksa, nomor run
+validasi dimasukkan sebagai `validation_run_id` pada workflow
+`final-detector-comparison.yml`. Workflow uji akhir mengambil konfigurasi dari
+artefak tersebut dan memeriksa hash data sebelum memakainya. Batas akhir uji
+ditetapkan pada 11 November 2026 pukul 16.45 UTC. Uji akhir hanya dimulai
+secara manual; perubahan ini tidak menjalankannya.
 
 Fitur yang diubah oleh injeksi adalah log(1 + jumlah perdagangan), sesuai
 contoh manualisasi. Skrip dan workflow eksperimen lama berada di `archive/`;
