@@ -8,27 +8,29 @@ import statistics
 from collections import defaultdict
 from pathlib import Path
 
-from thesis_core.data import DATA, ROOT, prepare
-from thesis_core.evaluation import (
+from scripts.versi_eksperimen import commit_eksperimen
+from src.inti_skripsi.data import DATA, ROOT, siapkan_data
+from src.inti_skripsi.evaluasi import (
     MAIN_HORIZON,
     SENSITIVITY_HORIZONS,
-    score_alarms,
-    summarize_group,
+    cocokkan_alarm,
+    ringkas_skenario,
 )
-from thesis_core.injection import FEATURE_INDEX, audit_injection, make_stream
-from thesis_core.protocol import (
+from src.inti_skripsi.injeksi import FEATURE_INDEX, audit_injeksi, buat_aliran
+from src.inti_skripsi.protokol import (
     REPETITIONS,
     SCENARIOS,
     VALIDATION_MAX_INJECTION_FRACTION,
-    configuration_name,
-    configurations,
-    onsets,
-    run_detector,
-    write_csv,
+    nama_konfigurasi,
+    daftar_konfigurasi,
+    pilih_titik_injeksi,
+    jalankan_detektor,
+    rincian_jadwal,
+    tulis_csv,
 )
 
 
-def select_key(item):
+def kunci_pemilihan(item):
     """Urutkan kandidat menurut F1 dan tiga kriteria tambahan Bab 4."""
     delay = item["mean_delay"] if item["mean_delay"] is not None else math.inf
     return (
@@ -40,46 +42,49 @@ def select_key(item):
     )
 
 
-def _cases(validation, chosen_onsets):
-    """Buat salinan validasi dengan titik bersama untuk empat skenario."""
+def _siapkan_skenario(validation, chosen_onsets):
+    """Buat salinan validasi dengan titik awal yang sama untuk empat skenario."""
     return [
-        (scenario, onset, make_stream(validation, onset, scenario))
+        (scenario, onset, buat_aliran(validation, onset, scenario))
         for onset in chosen_onsets
         for scenario in SCENARIOS
     ]
 
 
-def _run_candidate(config, historical, validation, cases):
+def _jalankan_kandidat(konfigurasi, historical, validation, cases):
     """Catat aliran asli dan seluruh salinan satu kandidat."""
-    name = configuration_name(config)
-    control_alarms, control_seconds = run_detector(config, historical, validation)
+    name = nama_konfigurasi(konfigurasi)
+    control_alarms, control_seconds = jalankan_detektor(
+        konfigurasi, historical, validation
+    )
     rows, by_scenario = [], defaultdict(list)
-    for scenario, onset, stream in cases:
-        alarms, seconds = run_detector(config, historical, stream)
+    for scenario, onset, aliran in cases:
+        daftar_alarm, seconds = jalankan_detektor(konfigurasi, historical, aliran)
         row = {
             "config": name,
-            "detector": config[0],
+            "detector": konfigurasi[0],
+            **rincian_jadwal(konfigurasi),
             "scenario": scenario,
             "onset": onset,
-            "alarm_count": len(alarms),
-            "alarm_indices": ";".join(map(str, alarms)),
+            "alarm_count": len(daftar_alarm),
+            "alarm_indices": ";".join(map(str, daftar_alarm)),
             "seconds": seconds,
         }
         for horizon in SENSITIVITY_HORIZONS:
-            values = score_alarms(alarms, onset, len(stream), horizon)
+            values = cocokkan_alarm(daftar_alarm, onset, len(aliran), horizon)
             row.update({f"{key}_h{horizon}": value for key, value in values.items()})
         rows.append(row)
         by_scenario[scenario].append(row)
     return control_alarms, control_seconds, rows, by_scenario
 
 
-def _scenario_summaries(config, control_alarms, control_seconds, by_scenario):
+def _ringkasan_skenario(konfigurasi, control_alarms, control_seconds, by_scenario):
     """Ringkas empat jenis injeksi dan kumpulkan keterlambatannya."""
-    name = configuration_name(config)
+    name = nama_konfigurasi(konfigurasi)
     summaries, scenario_f1, delays = [], [], []
     for scenario in SCENARIOS:
         group = by_scenario[scenario]
-        metrics = summarize_group(group)
+        metrics = ringkas_skenario(group)
         scenario_f1.append(metrics["f1"])
         delays.extend(
             row[f"delay_h{MAIN_HORIZON}"]
@@ -89,7 +94,8 @@ def _scenario_summaries(config, control_alarms, control_seconds, by_scenario):
         summaries.append(
             {
                 "config": name,
-                "detector": config[0],
+                "detector": konfigurasi[0],
+                **rincian_jadwal(konfigurasi),
                 "scenario": scenario,
                 "repetitions": len(group),
                 **metrics,
@@ -102,16 +108,17 @@ def _scenario_summaries(config, control_alarms, control_seconds, by_scenario):
     return summaries, scenario_f1, delays
 
 
-def _summarize_candidate(config, control_alarms, control_seconds, rows, by_scenario):
+def _ringkas_kandidat(konfigurasi, control_alarms, control_seconds, rows, by_scenario):
     """Bentuk ringkasan skenario dan kriteria pemilihan satu kandidat."""
     total_seconds = control_seconds + sum(row["seconds"] for row in rows)
-    summaries, scenario_f1, delays = _scenario_summaries(
-        config, control_alarms, control_seconds, by_scenario
+    summaries, scenario_f1, delays = _ringkasan_skenario(
+        konfigurasi, control_alarms, control_seconds, by_scenario
     )
     candidate = {
-        "config": configuration_name(config),
-        "method": config[0],
-        "parameters": list(config[1:]),
+        "config": nama_konfigurasi(konfigurasi),
+        "method": konfigurasi[0],
+        "parameters": list(konfigurasi[1:]),
+        **rincian_jadwal(konfigurasi),
         "macro_f1": statistics.mean(scenario_f1),
         "control_alarms": len(control_alarms),
         "mean_delay": statistics.mean(delays) if delays else None,
@@ -120,7 +127,7 @@ def _summarize_candidate(config, control_alarms, control_seconds, rows, by_scena
     return summaries, candidate
 
 
-def _write_results(
+def _tulis_hasil(
     output_root,
     smoke,
     rows,
@@ -131,18 +138,20 @@ def _write_results(
     chosen_onsets,
     selected,
     data_path,
+    code_commit,
 ):
     """Simpan keluaran validasi dan pilihan konfigurasi bila lengkap."""
     output = output_root / "reports"
     prefix = "smoke" if smoke else "thesis"
-    write_csv(output / f"{prefix}_validation_runs.csv", rows)
-    write_csv(output / f"{prefix}_validation_summary.csv", summaries)
-    write_csv(output / f"{prefix}_injection_audit.csv", audits)
+    tulis_csv(output / f"{prefix}_validation_runs.csv", rows)
+    tulis_csv(output / f"{prefix}_validation_summary.csv", summaries)
+    tulis_csv(output / f"{prefix}_injection_audit.csv", audits)
     if smoke:
         return
     payload = {
         "source": "chronological validation only",
         "dataset_sha256": hashlib.sha256(Path(data_path).read_bytes()).hexdigest(),
+        "code_commit": code_commit,
         "historical_rows": len(historical),
         "validation_rows": len(validation),
         "onsets": chosen_onsets,
@@ -156,45 +165,49 @@ def _write_results(
     )
 
 
-def _validation_inputs(smoke, data_path):
-    """Siapkan salinan dan kandidat yang sama untuk semua detektor."""
-    historical, validation, _, _, _ = prepare(data_path) if data_path else prepare()
-    chosen_onsets = onsets(len(validation), VALIDATION_MAX_INJECTION_FRACTION)
+def _siapkan_validasi(smoke, data_path):
+    """Siapkan kandidat tiap metode dan salinan validasi yang dipakai bersama."""
+    historical, validation, _, _, _ = (
+        siapkan_data(data_path) if data_path else siapkan_data()
+    )
+    chosen_onsets = pilih_titik_injeksi(
+        len(validation), VALIDATION_MAX_INJECTION_FRACTION
+    )
     if smoke:
         chosen_onsets = chosen_onsets[:1]
-    candidates = list(configurations())
+    candidates = list(daftar_konfigurasi())
     if smoke:
         candidates = [
             next(c for c in candidates if c[0] == method)
             for method in ("KSWIN", "PCA-CD")
         ]
-    cases = _cases(validation, chosen_onsets)
+    cases = _siapkan_skenario(validation, chosen_onsets)
     audits = [
         item
-        for scenario, onset, stream in cases
-        for item in audit_injection(validation, stream, onset, scenario)
+        for scenario, onset, aliran in cases
+        for item in audit_injeksi(validation, aliran, onset, scenario)
     ]
     return historical, validation, chosen_onsets, candidates, cases, audits
 
 
-def _evaluate_candidates(candidates, historical, validation, cases):
+def _nilai_kandidat(candidates, historical, validation, cases):
     """Jalankan kandidat dan pilih satu konfigurasi per metode."""
     rows, summaries, selected = [], [], {}
-    for config in candidates:
-        control, seconds, candidate_rows, groups = _run_candidate(
-            config, historical, validation, cases
+    for konfigurasi in candidates:
+        control, seconds, candidate_rows, groups = _jalankan_kandidat(
+            konfigurasi, historical, validation, cases
         )
         rows.extend(candidate_rows)
-        one_summary, candidate = _summarize_candidate(
-            config, control, seconds, candidate_rows, groups
+        one_summary, candidate = _ringkas_kandidat(
+            konfigurasi, control, seconds, candidate_rows, groups
         )
         summaries.extend(one_summary)
-        if config[0] not in selected or select_key(candidate) < select_key(
-            selected[config[0]]
-        ):
-            selected[config[0]] = candidate
+        if konfigurasi[0] not in selected or kunci_pemilihan(
+            candidate
+        ) < kunci_pemilihan(selected[konfigurasi[0]]):
+            selected[konfigurasi[0]] = candidate
         print(
-            f"{configuration_name(config)}: mean F1={candidate['macro_f1']:.4f}",
+            f"{nama_konfigurasi(konfigurasi)}: mean F1={candidate['macro_f1']:.4f}",
             flush=True,
         )
     return rows, summaries, selected
@@ -202,13 +215,14 @@ def _evaluate_candidates(candidates, historical, validation, cases):
 
 def main(smoke=False, data_path=None, output_root=ROOT):
     """Jalankan validasi tanpa menggunakan data uji untuk memilih kandidat."""
+    code_commit = None if smoke else commit_eksperimen()
     historical, validation, chosen_onsets, candidates, cases, audits = (
-        _validation_inputs(smoke, data_path)
+        _siapkan_validasi(smoke, data_path)
     )
-    rows, summaries, selected = _evaluate_candidates(
+    rows, summaries, selected = _nilai_kandidat(
         candidates, historical, validation, cases
     )
-    _write_results(
+    _tulis_hasil(
         output_root,
         smoke,
         rows,
@@ -219,6 +233,7 @@ def main(smoke=False, data_path=None, output_root=ROOT):
         chosen_onsets,
         selected,
         data_path if data_path else DATA,
+        code_commit,
     )
     print(
         "SMOKE ONLY" if smoke else "VALIDATION COMPLETE",

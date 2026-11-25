@@ -18,7 +18,22 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 360
     steps:
+      - name: Temukan commit yang dipakai saat validasi
+        id: validation
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VALIDATION_RUN_ID: ${{ inputs.validation_run_id }}
+        run: |
+          sha=$(gh run view "$VALIDATION_RUN_ID" --repo "$GITHUB_REPOSITORY" \
+            --json headSha,conclusion --jq 'select(.conclusion == "success") | .headSha')
+          if [[ ! "$sha" =~ ^[0-9a-f]{40}$ ]]; then
+            echo "Commit dari validasi yang berhasil tidak ditemukan." >&2
+            exit 1
+          fi
+          echo "commit=$sha" >> "$GITHUB_OUTPUT"
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ steps.validation.outputs.commit }}
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
@@ -31,9 +46,9 @@ jobs:
           path: reports
       - name: Jalankan pengujian akhir
         env:
-          TEST_CUTOFF_UTC: '2026-11-11 16:45:00+00:00'
+          TEST_CUTOFF_UTC: '2026-11-25 16:45:00+00:00'
         run: |
-          python scripts/final_test.py \
+          python -m scripts.final_test \
             --test-cutoff "$TEST_CUTOFF_UTC" \
             --selection reports/thesis_selected_config.json \
             --confirm-final

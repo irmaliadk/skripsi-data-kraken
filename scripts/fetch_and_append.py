@@ -1,25 +1,28 @@
 """
 Dipanggil otomatis oleh GitHub Actions (lihat .github/workflows/collect.yml).
 Mengambil 720 candle TERBARU dari Kraken, menggabungkannya dengan data yang
-sudah tersimpan di data/btc_15m.csv, membuang baris kembar (berdasarkan
+sudah tersimpan di data/collection/btc_15m.csv, membuang baris kembar (berdasarkan
 waktu), lalu menyimpannya kembali -- supaya data terus bertambah tanpa
 pernah ketimpa atau hilang.
 """
+
 import os
 import pandas as pd
 import requests
 
 PAIR = "XBTUSD"
 INTERVAL_MENIT = 15
-OUTPUT = "data/btc_15m.csv"
+OUTPUT = "data/collection/btc_15m.csv"
 
 
 def ambil_dari_kraken() -> pd.DataFrame:
     url = "https://api.kraken.com/0/public/OHLC"
-    resp = requests.get(url, params={"pair": PAIR, "interval": INTERVAL_MENIT}, timeout=30)
+    resp = requests.get(
+        url, params={"pair": PAIR, "interval": INTERVAL_MENIT}, timeout=30
+    )
     data = resp.json()
     if data["error"]:
-        raise RuntimeError(f"Kraken mengirim error: {data['error']}")
+        raise RuntimeError(f"Kraken melaporkan galat: {data['error']}")
 
     candles = [v for k, v in data["result"].items() if k != "last"][0]
     kolom = ["time", "open", "high", "low", "close", "vwap", "volume", "count"]
@@ -43,8 +46,10 @@ def main():
 
     gabungan = gabungan.drop_duplicates(subset="time").sort_values("time")
     gabungan.to_csv(OUTPUT, index=False)
-    print(f"Total data tersimpan sekarang: {len(gabungan)} baris, "
-          f"dari {gabungan['time'].min()} sampai {gabungan['time'].max()}.")
+    print(
+        f"Total data tersimpan sekarang: {len(gabungan)} baris, "
+        f"dari {gabungan['time'].min()} sampai {gabungan['time'].max()}."
+    )
 
 
 if __name__ == "__main__":

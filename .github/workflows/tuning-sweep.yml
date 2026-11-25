@@ -17,7 +17,7 @@ jobs:
         with:
           python-version: '3.12'
       - name: Jalankan 50 titik validasi per jenis perubahan
-        run: python scripts/tune_detectors.py
+        run: python -m scripts.tune_detectors
       - name: Simpan hasil validasi
         uses: actions/upload-artifact@v4
         with:

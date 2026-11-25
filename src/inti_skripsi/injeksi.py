@@ -3,7 +3,7 @@
 import math
 import statistics
 
-from .kswin import ks_statistic
+from .kswin import statistik_ks
 
 
 MEAN_SHIFT_SD = 3
@@ -21,7 +21,7 @@ def pearson(a, b):
     return numerator / denom if denom else float("nan")
 
 
-def inject(validation, onset, kind, chosen, scale):
+def injeksi(validation, onset, kind, chosen, scale):
     """Ubah fitur terpilih sejak titik injeksi sesuai skenario."""
     out = [(t, list(v)) for t, v in validation]
     after = out[onset:]
@@ -43,25 +43,25 @@ def inject(validation, onset, kind, chosen, scale):
     return [(t, tuple(v)) for t, v in out]
 
 
-def make_stream(original, onset, scenario):
+def buat_aliran(original, onset, scenario):
     """Sisipkan skenario pada fitur jumlah perdagangan yang dibakukan."""
-    return inject(original, onset, scenario, FEATURE_INDEX, 1.0)
+    return injeksi(original, onset, scenario, FEATURE_INDEX, 1.0)
 
 
-def _stats(values):
+def _statistik(values):
     """Hitung rerata dan simpangan baku populasi untuk audit."""
     return statistics.mean(values), statistics.pstdev(values)
 
 
-def _audit_window(before, after, size, onset, scenario):
+def _audit_potongan(before, after, size, onset, scenario):
     """Catat perubahan statistik pada satu cakupan sesudah injeksi."""
     base, altered = before[:size], after[:size]
     x = [v[FEATURE_INDEX] for _, v in base]
     y = [v[FEATURE_INDEX] for _, v in altered]
     other = 1 if FEATURE_INDEX != 1 else 0
     paired = [v[other] for _, v in base]
-    mean0, sd0 = _stats(x)
-    mean1, sd1 = _stats(y)
+    mean0, sd0 = _statistik(x)
+    mean1, sd1 = _statistik(y)
     return {
         "scenario": scenario,
         "onset": onset,
@@ -73,11 +73,11 @@ def _audit_window(before, after, size, onset, scenario):
         "sd_after": sd1,
         "corr_before": pearson(paired, x),
         "corr_after": pearson(paired, y),
-        "ks_before_after": ks_statistic(x, y),
+        "ks_before_after": statistik_ks(x, y),
     }
 
 
-def _verify_injection(full, before, after, scenario):
+def _verifikasi_injeksi(full, before, after, scenario):
     """Periksa sifat utama skenario pada seluruh bagian injeksi."""
     if scenario == "mean":
         if not math.isclose(
@@ -96,7 +96,7 @@ def _verify_injection(full, before, after, scenario):
             raise ValueError("Pergeseran siklik tidak mempertahankan nilai fitur")
 
 
-def audit_injection(original, changed, onset, scenario):
+def audit_injeksi(original, changed, onset, scenario):
     """Audit segmen penuh dan sejumlah jendela pendek tiap salinan."""
     before, after = original[onset:], changed[onset:]
     if any(x[0] != y[0] for x, y in zip(original, changed)):
@@ -105,9 +105,9 @@ def audit_injection(original, changed, onset, scenario):
         raise ValueError("Injeksi mengubah catatan sebelum titik awal")
     widths = (len(before), *AUDIT_WINDOW_ROWS)
     result = [
-        _audit_window(before, after, size, onset, scenario)
+        _audit_potongan(before, after, size, onset, scenario)
         for size in dict.fromkeys(widths)
         if size <= len(before)
     ]
-    _verify_injection(result[0], before, after, scenario)
+    _verifikasi_injeksi(result[0], before, after, scenario)
     return result

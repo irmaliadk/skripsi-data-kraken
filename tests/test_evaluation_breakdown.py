@@ -6,9 +6,9 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
 
-from thesis_core.evaluation import score_alarms, summarize_group  # noqa: E402
-from thesis_core.protocol import SCENARIOS  # noqa: E402
-from tune_detectors import _scenario_summaries  # noqa: E402
+from src.inti_skripsi.evaluasi import cocokkan_alarm, ringkas_skenario  # noqa: E402
+from src.inti_skripsi.protokol import SCENARIOS  # noqa: E402
+from tune_detectors import _ringkasan_skenario  # noqa: E402
 
 
 class EvaluationBreakdownTests(unittest.TestCase):
@@ -16,7 +16,7 @@ class EvaluationBreakdownTests(unittest.TestCase):
 
     def test_alarm_before_onset_is_reported_separately(self):
         """Alarm sebelum injeksi tetap FP tetapi memiliki kolom tersendiri."""
-        result = score_alarms([2, 12, 15, 110], onset=10, length=130, horizon=96)
+        result = cocokkan_alarm([2, 12, 15, 110], onset=10, length=130, horizon=96)
         self.assertEqual(result["tp"], 1)
         self.assertEqual(result["fp"], 3)
         self.assertEqual(result["fp_before_onset"], 1)
@@ -38,15 +38,13 @@ class EvaluationBreakdownTests(unittest.TestCase):
                     "delay_h96": 2,
                 }
             ]
-        summaries, _, _ = _scenario_summaries(
-            ("KSWIN", 200, 30, 0.001), [4], 9.0, rows
-        )
+        summaries, _, _ = _ringkasan_skenario(("KSWIN", 200, 30, 0.001), [4], 9.0, rows)
         for index, summary in enumerate(summaries, start=1):
             self.assertEqual(summary["total_seconds"], float(index))
             self.assertEqual(summary["control_seconds"], 9.0)
             self.assertEqual(summary["fp_before_onset"], 1)
             self.assertEqual(summary["fp_after_onset"], 0)
-        self.assertEqual(summarize_group(rows[SCENARIOS[0]])["fp"], 1)
+        self.assertEqual(ringkas_skenario(rows[SCENARIOS[0]])["fp"], 1)
 
 
 if __name__ == "__main__":

@@ -19,7 +19,7 @@ jobs:
         with:
           python-version: "3.11"
       - name: Periksa data dan kelayakan jendela
-        run: python scripts/audit_data.py --input data/btc_15m.csv --output reports/audit_data.md
+        run: python scripts/audit_data.py --input data/collection/btc_15m.csv --output reports/audit_data.md
       - name: Tampilkan ringkasan
         if: always()
         run: |

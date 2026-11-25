@@ -9,7 +9,7 @@ from .data import FEATURE_COUNT
 KSWIN_SEED = 2020
 
 
-def ks_statistic(a, b):
+def statistik_ks(a, b):
     """Hitung jarak terbesar dua distribusi kumulatif empiris."""
     a, b = sorted(a), sorted(b)
     ia = ib = 0
@@ -23,12 +23,12 @@ def ks_statistic(a, b):
     return largest
 
 
-def reset_kswin(stream, n=300, r=30, alpha=0.0001):
+def deteksi_kswin(aliran, n=300, r=30, alpha=0.0001):
     """Periksa setiap jendela penuh dan sisakan r catatan setelah alarm."""
     rng = random.Random(KSWIN_SEED)
-    buffer, alarms = [], []
-    threshold = math.sqrt(-math.log(alpha) / r)
-    for i, (_, values) in enumerate(stream):
+    buffer, daftar_alarm = [], []
+    ambang = math.sqrt(-math.log(alpha) / r)
+    for i, (_, values) in enumerate(aliran):
         buffer.append(values)
         if len(buffer) > n:
             buffer.pop(0)
@@ -38,12 +38,12 @@ def reset_kswin(stream, n=300, r=30, alpha=0.0001):
         active = [
             j
             for j in range(FEATURE_COUNT)
-            if ks_statistic(
+            if statistik_ks(
                 [buffer[k][j] for k in old], [buffer[k][j] for k in range(n - r, n)]
             )
-            > threshold
+            > ambang
         ]
         if active:
-            alarms.append((i, active))
+            daftar_alarm.append((i, active))
             buffer = buffer[-r:]
-    return alarms
+    return daftar_alarm

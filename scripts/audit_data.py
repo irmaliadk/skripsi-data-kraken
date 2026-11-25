@@ -1,4 +1,5 @@
 """Audit cepat kecukupan data; tidak menghitung hasil detektor."""
+
 import argparse
 import csv
 from datetime import datetime, timedelta
@@ -8,8 +9,8 @@ from pathlib import Path
 def read_data(path):
     rows = []
     invalid = 0
-    with path.open(newline="", encoding="utf-8-sig") as stream:
-        reader = csv.DictReader(stream)
+    with path.open(newline="", encoding="utf-8-sig") as aliran:
+        reader = csv.DictReader(aliran)
         required = {"time", "close", "volume", "count"}
         if not required.issubset(reader.fieldnames or []):
             raise ValueError("Kolom wajib tidak lengkap: time, close, volume, count")
@@ -29,7 +30,7 @@ def read_data(path):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--input", default="data/btc_15m.csv")
+    parser.add_argument("--input", default="data/collection/btc_15m.csv")
     parser.add_argument("--output", default="reports/audit_data.md")
     args = parser.parse_args()
     rows, invalid = read_data(Path(args.input))
@@ -69,4 +70,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-

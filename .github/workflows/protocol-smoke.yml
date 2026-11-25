@@ -3,10 +3,12 @@ name: Periksa kode rancangan Bab 4
 on:
   push:
     paths:
-      - scripts/thesis_core/**
+      - src/inti_skripsi/**
       - scripts/tune_detectors.py
       - scripts/final_test.py
+      - scripts/bekukan_data.py
       - tests/**
+      - data/raw/btc_15m_study_20261125.csv
       - .github/workflows/protocol-smoke.yml
   workflow_dispatch:
 
@@ -21,12 +23,15 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - name: Periksa sintaks dan satu contoh validasi
+      - name: Periksa sintaks dan jalankan tes
         run: |
-          python -m compileall -q scripts/thesis_core scripts/tune_detectors.py scripts/final_test.py
+          python -m compileall -q src/inti_skripsi scripts
           python -m unittest discover -s tests -v
-          python scripts/tune_detectors.py --smoke
+      - name: Jalankan contoh validasi
+        if: ${{ hashFiles('data/raw/btc_15m_study_20261125.csv') != '' }}
+        run: python -m scripts.tune_detectors --smoke
       - name: Simpan laporan uji kecil
+        if: ${{ hashFiles('data/raw/btc_15m_study_20261125.csv') != '' }}
         uses: actions/upload-artifact@v4
         with:
           name: thesis-protocol-smoke
