@@ -3,6 +3,8 @@ name: Kumpulkan pembanding candle 1 dan 5 menit
 on:
   workflow_dispatch:
   push:
+    branches:
+      - main
     paths:
       - ".github/workflows/collect-alternative-intervals.yml"
       - "scripts/fetch_alternative_intervals.py"
@@ -14,6 +16,7 @@ permissions:
 
 jobs:
   collect:
+    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
